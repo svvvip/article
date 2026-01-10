@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+python-dotenv
+pyquery
+curl_cffi
+bencoder
+loguru
+apscheduler
+requests
+jinja2
