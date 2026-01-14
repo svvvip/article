@@ -2,19 +2,29 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
-from starlette.staticfiles import StaticFiles
 
-from app.api.v1 import article
-from app.core.config import root_path
-from app.core.database import Base, engine
+from app.api.v1 import article, user, config
+from app.core.database import Base, engine, session_scope
+from app.models import Config
+from app.modules.downloadclient import manager
 from app.scheduler import start_scheduler, scheduler
 from app.utils.log import logger
+
+
+def get_downloader_config():
+    config_list = []
+    with session_scope() as session:
+        configs = session.query(Config).filter(Config.key.ilike('Downloader.%')).all()
+        config_list.extend(configs)
+    return config_list
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
-    start_scheduler()
+    configs = get_downloader_config()
+    manager.init(configs)
+    # start_scheduler()
     logger.info(f"Scheduler started.")
     yield
     if scheduler.running:
@@ -30,8 +40,7 @@ app.add_middleware(
     allow_methods=["*"],  # 必须包含 OPTIONS
     allow_headers=["*"],  # 必须包含 X-Token
 )
-app.mount("/assets", StaticFiles(directory=f"{root_path}/app/assets"), name="assets")
 
-app.include_router(article.router, prefix='/api/v1', tags=["article"])
-
-
+app.include_router(article.router, prefix='/api/v1/articles', tags=["article"])
+app.include_router(user.router, prefix='/api/v1/users', tags=["user"])
+app.include_router(config.router, prefix='/api/v1/config', tags=["config"])

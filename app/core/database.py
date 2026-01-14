@@ -9,11 +9,12 @@ from sqlalchemy.orm import sessionmaker
 from app.core import settings
 from app.utils.log import logger
 
-engine = create_engine(settings.DATABASE_URL)
+engine = create_engine(settings.DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=engine
+    bind=engine,
+    expire_on_commit=False
 )
 
 Base = declarative_base()
@@ -31,12 +32,18 @@ def session_scope() -> Generator:
     finally:
         if session.is_active:
             session.expunge_all()
-        session.close()
+            session.close()
 
 
 def get_db():
-    db = SessionLocal()
+    session = SessionLocal()
     try:
-        yield db
+        yield session
+        session.commit()
+    except SQLAlchemyError as e:
+        logger.error(f"数据库操作失败：{str(e)}")
+        raise
     finally:
-        db.close()
+        if session.is_active:
+            session.expunge_all()
+            session.close()

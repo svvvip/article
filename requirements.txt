@@ -10,3 +10,9 @@ loguru
 apscheduler
 requests
 jinja2
+python-jose
+passlib
+qbittorrent-api
+transmission_rpc
+protobuf
+grpcio

@@ -10,10 +10,11 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.core.config import data_path
 from app.core.database import session_scope
+from app.enum import DownloadClientEnum
 from app.models.article import Article
+from app.modules.downloadclient import manager
 from app.utils.log import logger
 from app.modules.sht import sht
-from app.modules.thunder import thunder
 
 section_map = {
     '2': "国产原创",
@@ -274,7 +275,7 @@ def sync_size():
         articles = session.query(Article).filter(Article.size == None).order_by(Article.tid.desc()).all()
         for article in articles:
             magnet = article.magnet
-            size = thunder.analyze_size(magnet)
+            size = manager.get(DownloadClientEnum.THUNDER.value).analyze_size(magnet)
             if size:
                 article.size = size
                 session.commit()

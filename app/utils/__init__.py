@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from typing import Dict, get_origin, get_args, Union
+from urllib.parse import urlparse
 
 
 def dict_trans_obj(source: Dict, target: object):
@@ -35,3 +36,18 @@ def dict_trans_obj(source: Dict, target: object):
             raise ValueError(f"Invalid date format for field '{name}': {value}") from e
 
         setattr(target, name, value)
+
+
+def get_host_and_port(url):
+    parsed_url = urlparse(url)
+    host = parsed_url.hostname
+    port = parsed_url.port
+
+    # 如果端口号为空，则根据方案设置默认端口
+    if port is None:
+        if parsed_url.scheme == 'http':
+            port = 80
+        elif parsed_url.scheme == 'https':
+            port = 443
+
+    return host, port

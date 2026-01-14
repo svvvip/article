@@ -100,7 +100,6 @@ class SHT:
     proxies = {}
     headers = {}
     cookie = {}
-    bypass = None
     flare_solver = None
 
     def __init__(self):
@@ -115,7 +114,6 @@ class SHT:
             "http": settings.PROXY,
             "https": settings.PROXY
         }
-        self.bypass = settings.BYPASS_URL
         self.flare_solver = settings.FLARE_SOLVERR_URL
 
     def get_original(self, url):
