@@ -97,14 +97,23 @@ def get_torrents(keyword, db: Session) -> Dict:
     return success(torrents)
 
 
-
 def get_category(db: Session):
-    result = db.query(Article.section, func.count(Article.tid).label("item_count")).group_by(Article.section).all()
-    sections = []
-    for item in result:
-        section = {
-            "category": item[0],
-            "count": item[1],
-        }
-        sections.append(section)
-    return success(sections)
+    result = db.query(Article.section, Article.sub_type, func.count(Article.tid).label("item_count")).group_by(
+        Article.section, Article.sub_type).all()
+    grouped = {}
+
+    for section, sub_type, count in result:
+        if section not in grouped:
+            grouped[section] = {
+                "category": section,
+                "count": 0,
+                "items": []
+            }
+        if sub_type:
+            grouped[section]["items"].append({
+                "category": sub_type,
+                "count": count
+            })
+
+        grouped[section]["count"] += count
+    return success(list(grouped.values()))
