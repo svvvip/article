@@ -1,9 +1,13 @@
+import json
 from typing import Dict, List
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core.database import session_scope
+from app.models import Config, DownloadLog
 from app.models.article import Article
+from app.modules.downloadclient import downloadManager
 from app.schemas.article import ArticleQuery
 from app.schemas.response import success
 
@@ -98,8 +102,9 @@ def get_torrents(keyword, db: Session) -> Dict:
 
 
 def get_category(db: Session):
-    result = db.query(Article.section, Article.sub_type, func.count(Article.tid).label("item_count")).group_by(
-        Article.section, Article.sub_type).all()
+    item_count = func.count(Article.tid).label("item_count")
+    result = db.query(Article.section, Article.sub_type, item_count).group_by(
+        Article.section, Article.sub_type).order_by(item_count.desc()).all()
     grouped = {}
 
     for section, sub_type, count in result:
@@ -117,3 +122,72 @@ def get_category(db: Session):
 
         grouped[section]["count"] += count
     return success(list(grouped.values()))
+
+
+def calc_score(rule, section, sub_type):
+    score = 0
+
+    if rule["category"] == section:
+        score += 10
+    elif rule["category"] == "ALL":
+        score += 1
+    else:
+        return 0
+
+    if rule["subCategory"] == sub_type:
+        score += 5
+    elif rule["subCategory"] == "ALL":
+        score += 1
+    else:
+        return 0
+
+    return score
+
+
+def match_best_rules(rules, section, sub_type):
+    best_score = 0
+    best_rules = []
+
+    for rule in rules:
+        score = calc_score(rule, section, sub_type)
+        if score == 0:
+            continue
+
+        if score > best_score:
+            best_score = score
+            best_rules = [rule]
+        elif score == best_score:
+            best_rules.append(rule)
+
+    return best_rules
+
+
+def download_magnet(tid, magnet, downloader, save_path):
+    is_success = downloadManager.get(f'Downloader.{downloader}').download(magnet, save_path)
+    if is_success:
+        with session_scope() as db:
+            download_log = DownloadLog()
+            download_log.tid = tid
+            download_log.magnet = magnet
+            download_log.save_path = save_path
+            download_log.downloader = downloader
+            db.add(download_log)
+    return is_success
+
+
+def download_article(tid: int):
+    with session_scope() as db:
+        article = db.get(Article, tid)
+        config = db.query(Config).filter(Config.key == 'DownloadFolder').first()
+    success_count = 0
+    if article and config:
+        section = article.section
+        sub_type = article.sub_type
+        rules = json.loads(str(config.content))
+        if rules:
+            best_rules = match_best_rules(rules, section, sub_type)
+            for rule in best_rules:
+                is_success = download_magnet(article.tid, article.magnet, rule['downloader'], rule['savePath'])
+                if is_success:
+                    success_count += 1
+    return success(f"成功添加：{success_count}")

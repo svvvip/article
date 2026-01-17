@@ -47,7 +47,7 @@ class CloudNas:
                 logger.error(f"获取CD2 token失败:{e}")
         return None
 
-    def download_offline(self, magnet, save_path):
+    def download(self, magnet, save_path):
         if self.config.get('url') and self.config.get('username') and self.config.get('password'):
             logger.info(f"开始处理CD2离线下载任务：{magnet}")
             token = self.get_token()

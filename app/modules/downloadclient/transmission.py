@@ -30,25 +30,12 @@ class TransmissionClient:
                 logger.error(f"Transmission连接失败：{e}")
         return False
 
-    def add_torrent(self, torrent_file_path, save_path=None, tags=None):
-        if self.login_transmission():
-            try:
-                logger.info(f"添加种子文件到Transmission成功")
-                with open(torrent_file_path, 'rb') as torrent_file:
-                    self.client.add_torrent(torrent=torrent_file, download_dir=save_path, labels=[tags])
-                    logger.info(f"添加种子文件成功")
-                return True
-            except Exception as e:
-                logger.error(f"添加种子失败: {e}")
-        return False
-
-    def add_torrent_by_magnet(self, magnet, save_path=None, tags=None, min_size_mb=1000):
+    def download(self, magnet, save_path):
         if self.login_transmission():
             try:
                 logger.info(f"添加磁力链接到Transmission成功")
                 self.client.add_torrent(torrent=magnet,
-                                        download_dir=save_path,
-                                        labels=[tags])
+                                        download_dir=save_path)
                 torrent_hash = magnet.split('btih:')[1].split('&')[0].lower()
                 max_retries = 10
                 retries = 0
@@ -72,7 +59,7 @@ class TransmissionClient:
                 small_file_ids = []
                 for file_info in torrent_info.files():
                     file_size_mb = file_info.size / (1024 * 1024)
-                    if file_size_mb < min_size_mb:
+                    if file_size_mb < 200:
                         small_file_ids.append(file_info.id)
 
                 if small_file_ids:
@@ -85,4 +72,3 @@ class TransmissionClient:
                 logger.error(f"添加磁链链接失败:{e}")
                 return False
         return False
-

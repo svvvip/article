@@ -32,4 +32,4 @@ class DownloaderManager:
     def get(self, name: str):
         return self.instances.get(name)
 
-manager = DownloaderManager()
+downloadManager = DownloaderManager()

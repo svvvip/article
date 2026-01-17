@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.enum import DownloadClientEnum
 from app.models import Config
-from app.modules.downloadclient import manager
+from app.modules.downloadclient import downloadManager
 from app.schemas.config import JsonPayload
 from app.schemas.response import success, error
 
@@ -20,7 +20,7 @@ def save_option(json_payload: JsonPayload, db: Session):
     else:
         config.content = json.dumps(json_payload.payload)
     if json_payload.key in [item.value for item in DownloadClientEnum]:
-        manager.reload(json_payload.key, json_payload.payload)
+        downloadManager.reload(json_payload.key, json_payload.payload)
     return success()
 
 

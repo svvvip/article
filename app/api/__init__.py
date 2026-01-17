@@ -6,7 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 from app.api.v1 import article, user, config
 from app.core.database import Base, engine, session_scope
 from app.models import Config
-from app.modules.downloadclient import manager
+from app.modules.downloadclient import downloadManager
 from app.scheduler import start_scheduler, scheduler
 from app.utils.log import logger
 
@@ -23,7 +23,7 @@ def get_downloader_config():
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     configs = get_downloader_config()
-    manager.init(configs)
+    downloadManager.init(configs)
     # start_scheduler()
     logger.info(f"Scheduler started.")
     yield
