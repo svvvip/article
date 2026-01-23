@@ -1,0 +1,1 @@
+import{r as t}from"./request-2_miQ1pQ.js";function e(o){return t({url:`/config/${o}`,method:"get"})}function f(o,n){return t({url:"/config/",method:"post",data:{key:o,payload:n}})}function a(){return t({url:"/config/downloaders",method:"get"})}export{a as f,e as g,f as p};

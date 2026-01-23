@@ -214,7 +214,7 @@ class SHT:
                 if magnet:
                     date = extract_exact_datetime(html)
                     size = extract_and_convert_video_size(html)
-                    sub_type = extract_bracket_content(html)
+                    category = extract_bracket_content(html)
                     title = doc('h2.n5_bbsnrbt').text()
                     pattern = r"^\[.*?\]"
                     title = re.sub(pattern, "", title).strip()
@@ -226,7 +226,7 @@ class SHT:
                             img_src_list.append(src.strip())
                     return {
                         "title": title,
-                        "sub_type": sub_type,
+                        "category": category,
                         "publish_date": date,
                         "magnet": magnet,
                         "preview_images": ",".join(img_src_list),

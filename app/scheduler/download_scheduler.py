@@ -30,7 +30,7 @@ def download_by_route(route_index_list):
                 if route.get('category'):
                     query = query.filter(Article.section == route['category'])
                 if route.get('subCategory'):
-                    query = query.filter(Article.sub_type == route['subCategory'])
+                    query = query.filter(Article.category == route['subCategory'])
                 articles = query.all()
                 if route.get('regex'):
                     pattern = re.compile(route["regex"])

@@ -19,7 +19,7 @@ def get_download_log_page(
             DownloadLog.create_time.label("download_time"),
 
             Article.section.label("section"),
-            Article.sub_type.label("sub_type"),
+            Article.category.label("category"),
             Article.title.label("title"),
             Article.size.label("size"),
             Article.preview_images.label("preview_images"),
@@ -61,7 +61,7 @@ def get_download_log_page(
                 "id": r.id,
                 "tid": r.tid,
                 "section": r.section,
-                "sub_type": r.sub_type,
+                "category": r.category,
                 "title": r.title,
                 "size": r.size,
                 "preview_images": r.preview_images,
