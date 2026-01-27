@@ -21,6 +21,8 @@ def list_task(db: Session):
 
 
 def validate_func_args(args: Any, args_list: Iterable[str]) -> Tuple[bool, str]:
+    if not args_list:
+        return True,""
     if isinstance(args, str):
         try:
             args = json.loads(args)
