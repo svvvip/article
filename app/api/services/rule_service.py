@@ -18,7 +18,7 @@ def add_rule(db: Session, rule_form: RuleForm):
 
 def update_rule(db: Session, rule_form: RuleForm):
     rule = db.get(Rule, rule_form.id)
-    if not rule:
+    if rule:
         rule.section = rule_form.section
         rule.category = rule_form.category
         rule.regex = rule_form.regex
