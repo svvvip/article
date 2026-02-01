@@ -71,9 +71,9 @@ def to_number_list(
     raise ValueError(f"不支持的类型：{type(value).__name__}")
 
 @task_monitor
-def download_by_route(rule_index_list):
+def download_by_route(rule_id_list):
     try:
-        rule_id_list = to_number_list(rule_index_list)
+        rule_id_list = to_number_list(rule_id_list)
     except ValueError as e:
         logger.error(f"订阅任务执行失败: {e}")
         return None
