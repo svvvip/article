@@ -1,4 +1,7 @@
+import datetime
 import io
+import os
+import shutil
 from typing import Dict, List
 
 from sqlalchemy import func, exists, inspect, select
@@ -87,7 +90,7 @@ def get_torrents(keyword, db: Session) -> Dict:
         torrent = {
             'id': article.tid,
             'site': 'sehuatang',
-            'size_mb': article.size,
+            'size_mb': article.size or 0,
             'seeders': 66,
             'title': article.title,
             'download_url': article.magnet,
@@ -173,14 +176,26 @@ def match_best_rules(rules, section, category, title):
     return best_rules
 
 
-def download_magnet(tid, magnet, downloader, save_path):
+def convert_save_path(article: Article, original_save_path):
+    current_date = datetime.date.today()
+    save_path = original_save_path.format(section=article.section,
+                                          category=article.category or '未分类',
+                                          publish_date=article.publish_date,
+                                          current_date=current_date
+                                          )
+    return save_path
+
+
+def download_magnet(article: Article, magnet, downloader, save_path):
+    save_path = convert_save_path(article, save_path)
+
     is_success = downloadManager.download(f'Downloader.{downloader}', magnet, save_path)
     if is_success:
         with session_scope() as db:
             download_log = DownloadLog()
-            download_log.tid = tid
+            download_log.tid = article.tid
             download_log.magnet = magnet
-            download_log.save_path = save_path
+            download_log.save_path = convert_save_path(article, save_path)
             download_log.downloader = downloader
             db.add(download_log)
     return is_success
@@ -214,7 +229,7 @@ def download_article(tid: int):
         if not best_rules:
             return error("未匹配到合适的下载路径")
         for rule in best_rules:
-            is_success = download_magnet(article.tid, article.magnet, rule.downloader, rule.save_path)
+            is_success = download_magnet(article, article.magnet, rule.downloader, rule.save_path)
             if is_success:
                 pushManager.send(convert_message_data(article, rule.downloader, rule.save_path))
                 success_count += 1
@@ -226,7 +241,7 @@ def download_article(tid: int):
 def manul_download(tid, downloader, save_path):
     with session_scope() as db:
         article = db.get(Article, tid)
-    is_success = download_magnet(article.tid, article.magnet, downloader, save_path)
+    is_success = download_magnet(article, article.magnet, downloader, save_path)
     if is_success:
         pushManager.send(convert_message_data(article, downloader, save_path))
         return success(message="成功创建下载任务")

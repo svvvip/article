@@ -104,7 +104,7 @@ def download_by_route(rule_id_list):
                         if article.title and pattern.search(article.title)
                     ]
             for article in articles:
-                is_success = article_service.download_magnet(article.tid, article.magnet, rule.downloader,
+                is_success = article_service.download_magnet(article, article.magnet, rule.downloader,
                                                              rule.save_path)
                 if is_success:
                     success_count += 1

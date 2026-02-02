@@ -81,3 +81,9 @@ def generate_secure_random_string(length: int) -> str:
     # 选择字符集（包括字母和数字）
     characters = string.ascii_letters + string.digits
     return ''.join(secrets.choice(characters) for _ in range(length))
+
+
+
+def get_host_port(url):
+    parsed_url = urlparse(url)
+    return parsed_url.netloc
