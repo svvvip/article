@@ -11,6 +11,7 @@ from app.api.v1 import article, user, config, task, download_log, rule, token
 from app.core.config import root_path, config_manager
 from app.core.database import Base, engine, session_scope
 from app.enum import PusherEnum, DownloadClientEnum, SystemConfigEnum
+from app.migration.setup import upgrade
 from app.models import Config
 from app.modules.downloadclient.cloudnas.cloudnas import CloudNas
 from app.modules.downloadclient.manager import downloadManager
@@ -69,6 +70,9 @@ async def lifespan(app: FastAPI):
     load_downloader_manager()
     # 加载通知管理器
     load_pusher_manager()
+    # 升级数据库表格
+    upgrade()
+    # 开启定时任务
     start_scheduler()
     logger.success("服务已启动: http://127.0.0.1:8000")
     yield

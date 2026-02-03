@@ -3,31 +3,29 @@ import time
 from sqlalchemy import func, select
 from app.core.database import session_scope
 from app.models.article import Article
+from app.modules.crawler.x1080x import x1080x
 from app.utils.log import logger
-from app.modules.crawler.sht import sht
 from app.utils.wrapper import task_monitor
 
-section_map = {
-    '2': "国产原创",
-    '36': "亚洲无码原创",
-    '38': "欧美无码",
-    '37': "亚洲有码原创",
-    '103': "高清中文字幕",
-    '104': "素人有码系列",
-    '151': "4K原版",
-    '152': "韩国主播",
-    "160": "VR视频区",
-    "39": "动漫原创",
-    "107": "三级写真"
+type_map = {
+    '5212': "国产品牌",
+    '5206': "有码HD",
+    '5207': "无码HD",
+    '5208': "FC2HD",
+    '5216': "MGSHD",
+    '5479': "中文字幕",
+    '5213': "探花精选",
+    '5217': "主播精选",
+    "5218": "其他"
 }
 
 
 @task_monitor
-def sync_sht_by_tid():
+def sync_x1080_by_tid():
     result = []
-    for fid in section_map:
-        section = section_map[fid]
-        success_count, page, fail_list = sync_new_article(fid, 1, 100)
+    for type_id in type_map:
+        section = type_map[type_id]
+        success_count, page, fail_list = sync_new_article(type_id, 1, 100)
         result.append(
             {
                 "section": section,
@@ -40,11 +38,11 @@ def sync_sht_by_tid():
 
 
 @task_monitor
-def sync_sht_by_max_page(max_page):
+def sync_x1080_by_max_page(max_page):
     result = []
-    for fid in section_map:
-        section = section_map[fid]
-        success_count, page, fail_list = sync_new_article_no_stop(fid, 1, max_page)
+    for type_id in type_map:
+        section = type_map[type_id]
+        success_count, page, fail_list = sync_new_article_no_stop(type_id, 1, max_page)
         result.append(
             {
                 "section": section,
@@ -56,9 +54,9 @@ def sync_sht_by_max_page(max_page):
     return result
 
 
-def sync_new_article(fid, start_page=1, max_page=100):
-    fid = str(fid)
-    section = section_map[fid]
+def sync_new_article(type_id, start_page=1, max_page=100):
+    type_id = str(type_id)
+    section = type_map[type_id]
     fail_id_list = []
     page = start_page
     success_count = 0
@@ -66,7 +64,7 @@ def sync_new_article(fid, start_page=1, max_page=100):
     with session_scope() as session:
         stop_tid = session.query(func.max(Article.tid)) \
                        .filter(Article.section == section) \
-                       .filter(Article.website == 'sehuatang') \
+                       .filter(Article.website == 'x1080x') \
                        .scalar() or 0
 
     logger.info(f"[{section}] 数据库最大TID: {stop_tid}")
@@ -77,9 +75,7 @@ def sync_new_article(fid, start_page=1, max_page=100):
         tid_list = []
         # 页面级重试
         for retry in range(3):
-            tid_list = sht.crawler_tid_list(
-                f"{sht.domain}/forum.php?mod=forumdisplay&fid={fid}&mobile=2&page={page}"
-            )
+            tid_list = x1080x.get_tid_from_list(244, type_id, page)
             if tid_list:
                 break
             logger.warning(f"第{page}页抓取失败，第{retry + 1}次重试")
@@ -89,36 +85,30 @@ def sync_new_article(fid, start_page=1, max_page=100):
             logger.info(f"连续抓取3次第{page}页失败,退出任务")
             break
         else:
-            min_tid = min(tid_list)
+            map_db_tid = [tid * 10000 for tid in tid_list]
+            min_tid = min(map_db_tid)
             logger.info(f"当前页最小TID: {min_tid}")
 
             # 批量判断数据库是否已存在
             with session_scope() as session:
                 existing_article_tids = (
                     session.execute(
-                        select(Article.tid).filter(Article.tid.in_(tid_list))
+                        select(Article.tid).filter(Article.tid.in_(map_db_tid))
                     ).scalars().all()
                 )
 
-            for tid in tid_list:
+            for tid in map_db_tid:
                 if tid in existing_article_tids:
                     continue
-
-                detail_url = (
-                    f"https://sehuatang.org/forum.php?"
-                    f"mod=viewthread&tid={tid}&extra=page%3D1&mobile=2"
-                )
-
                 try:
-                    data = sht.crawler_detail(detail_url)
+                    data = x1080x.get_detail_by_tid(tid / 10000)
                     if not data:
-                        fail_id_list.append(tid)
+                        fail_id_list.append(tid / 10000)
                         continue
 
                     data.update({
                         "tid": tid,
                         "section": section,
-                        "detail_url": detail_url
                     })
                     article = Article(data)
                     articles.append(article)
@@ -135,13 +125,13 @@ def sync_new_article(fid, start_page=1, max_page=100):
                 break
             page += 1
 
-    retry_fail_id_list = retry_fail_tid(fid, fail_id_list)
+    retry_fail_id_list = retry_fail_tid(type_id, fail_id_list)
     return success_count, page, retry_fail_id_list
 
 
-def sync_new_article_no_stop(fid, start_page=1, max_page=100):
-    fid = str(fid)
-    section = section_map[fid]
+def sync_new_article_no_stop(type_id, start_page=1, max_page=100):
+    type_id = str(type_id)
+    section = type_map[type_id]
     fail_id_list = []
     page = start_page
     success_count = 0
@@ -153,9 +143,7 @@ def sync_new_article_no_stop(fid, start_page=1, max_page=100):
 
         # 页面级重试
         for retry in range(3):
-            tid_list = sht.crawler_tid_list(
-                f"{sht.domain}/forum.php?mod=forumdisplay&fid={fid}&mobile=2&page={page}"
-            )
+            tid_list = x1080x.get_tid_from_list(244, type_id, page)
             if tid_list:
                 break
             logger.warning(f"第{page}页抓取失败，第{retry + 1}次重试")
@@ -165,33 +153,26 @@ def sync_new_article_no_stop(fid, start_page=1, max_page=100):
             logger.info(f"连续抓取3次第{page}页失败,退出任务")
             break
         else:
+            map_db_tid = [tid * 10000 for tid in tid_list]
             # 批量判断数据库是否已存在
             with session_scope() as session:
                 existing_article_tids = (
                     session.execute(
-                        select(Article.tid).filter(Article.tid.in_(tid_list))
+                        select(Article.tid).filter(Article.tid.in_(map_db_tid))
                     ).scalars().all()
                 )
 
-            for tid in tid_list:
+            for tid in map_db_tid:
                 if tid in existing_article_tids:
                     continue
-
-                detail_url = (
-                    f"https://sehuatang.org/forum.php?"
-                    f"mod=viewthread&tid={tid}&extra=page%3D1&mobile=2"
-                )
-
                 try:
-                    data = sht.crawler_detail(detail_url)
+                    data = x1080x.get_detail_by_tid(tid / 10000)
                     if not data:
-                        fail_id_list.append(tid)
+                        fail_id_list.append(tid / 10000)
                         continue
-
                     data.update({
                         "tid": tid,
                         "section": section,
-                        "detail_url": detail_url
                     })
                     article = Article(data)
                     articles.append(article)
@@ -204,29 +185,25 @@ def sync_new_article_no_stop(fid, start_page=1, max_page=100):
                 session.add_all(articles)
             page += 1
 
-    retry_fail_id_list = retry_fail_tid(fid, fail_id_list)
+    retry_fail_id_list = retry_fail_tid(type_id, fail_id_list)
     return success_count, page, retry_fail_id_list
 
 
-def retry_fail_tid(fid, fail_id_list):
+def retry_fail_tid(type_id, fail_id_list):
     fail_id_list = list(set(fail_id_list))
     if not fail_id_list:
         return []
-    section = section_map[fid]
+    section = type_id[type_id]
     logger.info(f"[{section}] 开始补抓失败ID，共 {len(fail_id_list)} 条")
     articles = []
     for tid in fail_id_list[:]:
-        detail_url = (
-            f"{sht.domain}/forum.php?mod=viewthread&tid={tid}&extra=page%3D1&mobile=2"
-        )
         try:
-            data = sht.crawler_detail(detail_url)
+            data = x1080x.get_detail_by_tid(tid)
             if not data:
                 continue
             data.update({
-                "tid": tid,
+                "tid": tid * 10000,
                 "section": section,
-                "detail_url": detail_url
             })
             article = Article(data)
             articles.append(article)

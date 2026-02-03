@@ -7,6 +7,7 @@ from app.core.database import session_scope
 from app.models.task import Task
 from app.scheduler.download_scheduler import download_by_route
 from app.scheduler.sht_sheduler import sync_sht_by_tid, sync_sht_by_max_page
+from app.scheduler.x1080x_scheduler import sync_x1080_by_tid, sync_x1080_by_max_page
 
 scheduler = AsyncIOScheduler()
 
@@ -22,6 +23,18 @@ FUNC_MAP = [
         "func_label": "色花堂爬虫-全量版",
         "func_args": ["max_page"],
         "func": sync_sht_by_max_page
+    },
+{
+        "func_name": "sync_x1080_by_tid",
+        "func_label": "X1080X爬虫-智能版",
+        "func_args": [],
+        "func": sync_x1080_by_tid
+    },
+    {
+        "func_name": "sync_x1080_by_max_page",
+        "func_label": "X1080X爬虫-全量版",
+        "func_args": ["max_page"],
+        "func": sync_x1080_by_max_page
     },
     {
         "func_name": "download_by_route",

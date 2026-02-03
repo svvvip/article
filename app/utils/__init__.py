@@ -6,6 +6,35 @@ from typing import Dict, get_origin, get_args, Union, Any
 from urllib.parse import urlparse
 
 
+_DATE_FORMATS = (
+    "%Y-%m-%d",
+    "%Y-%m-%d %H:%M",
+    "%Y-%m-%d %H:%M:%S",
+    "%Y/%m/%d",
+    "%Y/%m/%d %H:%M",
+    "%Y/%m/%d %H:%M:%S",
+)
+
+def _parse_date(value: str, target_type):
+    # 先尝试 isoformat（最快）
+    try:
+        if target_type is date:
+            return date.fromisoformat(value)
+        if target_type is datetime:
+            return datetime.fromisoformat(value)
+    except ValueError:
+        pass
+
+    # 再兜底 strptime
+    for fmt in _DATE_FORMATS:
+        try:
+            dt = datetime.strptime(value, fmt)
+            return dt.date() if target_type is date else dt
+        except ValueError:
+            continue
+
+    raise ValueError(f"Invalid date format: {value}")
+
 
 def dict_trans_obj(source: Dict, target: object):
     if not source or not target:
@@ -30,14 +59,13 @@ def dict_trans_obj(source: Dict, target: object):
             field_type = args[0] if args[1] is type(None) else args[1]
 
         try:
-            if field_type is date and isinstance(value, str):
-                value = date.fromisoformat(value)
-
-            elif field_type is datetime and isinstance(value, str):
-                value = datetime.fromisoformat(value)
+            if field_type in (date, datetime) and isinstance(value, str):
+                value = _parse_date(value.strip(), field_type)
 
         except ValueError as e:
-            raise ValueError(f"Invalid date format for field '{name}': {value}") from e
+            raise ValueError(
+                f"Invalid date format for field '{name}': {value}"
+            ) from e
 
         setattr(target, name, value)
 

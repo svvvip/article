@@ -98,7 +98,6 @@ class SHT:
     cookie = {}
     domain = 'https://sehuatang.org'
 
-
     def __init__(self):
         ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1"
         self.headers = {
@@ -107,7 +106,6 @@ class SHT:
         self.cookie = {
             '_safe': ''
         }
-
 
     def get_original(self, url):
         proxies = {
@@ -148,7 +146,8 @@ class SHT:
             "proxy": {"url": config_manager.get().PROXY},
             "cookies": [{"name": k, "value": v} for k, v in self.cookie.items()]
         }
-        res = requests.post(config_manager.get().FLARE_SOLVERR_URL, headers={"Content-Type": "application/json"}, json=payload)
+        res = requests.post(config_manager.get().FLARE_SOLVERR_URL, headers={"Content-Type": "application/json"},
+                            json=payload)
         result = res.json()
         if result['solution']['status'] != 200:
             return None
@@ -231,7 +230,8 @@ class SHT:
                         "publish_date": date,
                         "magnet": magnet,
                         "preview_images": ",".join(img_src_list),
-                        "size": size
+                        "size": size,
+                        "website": "sehuatang"
                     }
         except Exception as e:
             logger.error(f"抓取{url}失败:{e}")
